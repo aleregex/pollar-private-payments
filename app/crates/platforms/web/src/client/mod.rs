@@ -12,6 +12,7 @@ use gloo_timers::future::TimeoutFuture;
 use gloo_worker::{Spawnable, oneshot::OneshotBridge};
 use js_sys::{Array, BigInt, Function, Object, Reflect};
 use prover::{encryption::KEY_DERIVATION_MESSAGE, flows::N_OUTPUTS};
+use serde_json::Value as JsonValue;
 use std::{rc::Rc, str::FromStr};
 use stellar::{
     OnchainProofPublicInputs, PoolTransactInput, PreparedSorobanTx,
@@ -42,8 +43,6 @@ fn emit_progress(
     flow: &'static str,
     stage: &'static str,
     message: impl AsRef<str>,
-    current: Option<u32>,
-    total: Option<u32>,
 ) {
     let Some(cb) = on_status else { return };
 
@@ -55,20 +54,6 @@ fn emit_progress(
         &JsValue::from_str("message"),
         &JsValue::from_str(message.as_ref()),
     );
-    if let Some(current) = current {
-        let _ = Reflect::set(
-            &obj,
-            &JsValue::from_str("current"),
-            &JsValue::from_f64(f64::from(current)),
-        );
-    }
-    if let Some(total) = total {
-        let _ = Reflect::set(
-            &obj,
-            &JsValue::from_str("total"),
-            &JsValue::from_f64(f64::from(total)),
-        );
-    }
 
     // Best-effort progress: never fail the transaction flow due to UI callbacks.
     if cb.call1(&JsValue::NULL, &obj.into()).is_err() {
@@ -167,14 +152,7 @@ impl WebClient {
             .map_err(|e| JsError::new(&e.to_string()))?;
 
         for attempt in 1..=CONFIRM_POLL_ATTEMPTS {
-            emit_progress(
-                on_status,
-                flow,
-                "confirm",
-                "Confirming…",
-                Some(attempt),
-                Some(CONFIRM_POLL_ATTEMPTS),
-            );
+            emit_progress(on_status, flow, "confirm", "Confirming…");
             TimeoutFuture::new(CONFIRM_POLL_INTERVAL_MS).await;
             match confirm_tx(&hash, rpc)
                 .await
@@ -206,14 +184,7 @@ impl WebClient {
         on_status: &Option<Function>,
         flow: &'static str,
     ) -> Result<PreparedProverTx, JsError> {
-        emit_progress(
-            on_status,
-            flow,
-            "prepare_tx",
-            "Simulating transaction…",
-            None,
-            None,
-        );
+        emit_progress(on_status, flow, "prepare_tx", "Simulating transaction…");
         prepared.soroban_tx = self
             .prepare_pool_tx(
                 pool_contract_id,
@@ -352,7 +323,7 @@ impl WebClient {
             &on_status,
         )
         .await?;
-        emit_progress(&on_status, "register", "submit", "Submitting…", None, None);
+        emit_progress(&on_status, "register", "submit", "Submitting…");
         self.submit_tx(&signed_tx, "register", &on_status).await
     }
 
@@ -403,25 +374,78 @@ impl WebClient {
         }
     }
 
-    pub(crate) async fn stored_bootnode_url(&self) -> Option<String> {
+    #[wasm_bindgen(js_name = getSetting)]
+    pub async fn get_setting(&self, key: String) -> Result<JsValue, JsError> {
         match self
-            .storage_request(StorageWorkerRequest::BootnodeConfig, 2_000)
-            .await
+            .storage_request(StorageWorkerRequest::GetSetting(key), 2_000)
+            .await?
         {
-            Ok(StorageWorkerResponse::BootnodeConfig(config)) => {
-                (config.enabled && !config.url.is_empty()).then_some(config.url)
+            StorageWorkerResponse::Setting(value_json) => {
+                let parsed = value_json
+                    .map(|raw| serde_json::from_str::<JsonValue>(&raw))
+                    .transpose()
+                    .map_err(|e| JsError::new(&e.to_string()))?;
+                // Serialize JSON objects as plain JS objects (not the default JS `Map`)
+                // so the frontend can read fields via property access, e.g.
+                // `explorerSetting.baseUrl` / `bootnodeSetting.enabled`.
+                let serializer =
+                    serde_wasm_bindgen::Serializer::new().serialize_maps_as_objects(true);
+                Ok(serde::Serialize::serialize(&parsed, &serializer)?)
             }
-            _ => None,
+            other => Err(JsError::new(&format!("Unexpected response: {:?}", other))),
         }
+    }
+
+    #[wasm_bindgen(js_name = setSetting)]
+    pub async fn set_setting(&self, key: String, value: JsValue) -> Result<(), JsError> {
+        let value_json = serde_wasm_bindgen::from_value::<JsonValue>(value)
+            .map_err(|e| JsError::new(&e.to_string()))?;
+        match self
+            .storage_request(
+                StorageWorkerRequest::SetSetting {
+                    key,
+                    value_json: serde_json::to_string(&value_json)
+                        .map_err(|e| JsError::new(&e.to_string()))?,
+                },
+                2_000,
+            )
+            .await?
+        {
+            StorageWorkerResponse::Saved => Ok(()),
+            other => Err(JsError::new(&format!("Unexpected response: {:?}", other))),
+        }
+    }
+
+    pub(crate) async fn stored_bootnode_url(&self) -> Option<String> {
+        let setting = self
+            .get_setting(state::APP_SETTING_BOOTNODE_CONFIG.to_string())
+            .await
+            .ok()?;
+        let parsed =
+            serde_wasm_bindgen::from_value::<Option<types::BootnodeSetting>>(setting).ok()?;
+        let config = parsed?;
+        (config.enabled && !config.url.is_empty()).then_some(config.url)
     }
 
     #[wasm_bindgen(js_name = setBootnodeConfig)]
     pub async fn set_bootnode_config(&self, url: String) -> Result<(), JsError> {
-        let req = StorageWorkerRequest::SetBootnodeConfig { enabled: true, url };
-        match self.storage_request(req, 2_000).await? {
-            StorageWorkerResponse::Saved => Ok(()),
-            other => Err(JsError::new(&format!("Unexpected response: {:?}", other))),
-        }
+        self.set_setting(
+            state::APP_SETTING_BOOTNODE_CONFIG.to_string(),
+            serde_wasm_bindgen::to_value(&types::BootnodeSetting { enabled: true, url })?,
+        )
+        .await
+    }
+
+    #[wasm_bindgen(js_name = getBootnodeConfig)]
+    pub async fn get_bootnode_config(&self) -> Result<JsValue, JsError> {
+        self.get_setting(state::APP_SETTING_BOOTNODE_CONFIG.to_string())
+            .await
+    }
+
+    #[wasm_bindgen(js_name = getExplorerSetting)]
+    pub async fn get_explorer_setting(&self) -> Result<JsValue, JsError> {
+        self.get_setting(state::APP_SETTING_EXPLORER.to_string())
+            .await
     }
 
     #[wasm_bindgen(js_name = getUserKeys)]
@@ -490,11 +514,93 @@ impl WebClient {
         }
     }
 
-    #[wasm_bindgen(js_name = getRecentPoolActivity)]
-    pub async fn get_recent_pool_activity(&self, limit: u32) -> Result<JsValue, JsError> {
-        let req = StorageWorkerRequest::RecentPoolActivity(limit);
+    #[wasm_bindgen(js_name = getPortfolioBalances)]
+    pub async fn get_portfolio_balances(&self, address: String) -> Result<JsValue, JsError> {
+        let req = StorageWorkerRequest::PortfolioBalances(address);
         match self.storage_request(req, 2_000).await? {
-            StorageWorkerResponse::RecentPoolActivity(list) => {
+            StorageWorkerResponse::PortfolioBalances(list) => {
+                Ok(serde_wasm_bindgen::to_value(&list)?)
+            }
+            other => Err(JsError::new(&format!("Unexpected response: {:?}", other))),
+        }
+    }
+
+    #[wasm_bindgen(js_name = recordOperation)]
+    #[allow(clippy::too_many_arguments)]
+    pub async fn record_operation(
+        &self,
+        address: String,
+        pool_contract_id: String,
+        op_type: String,
+        amount: String,
+        direction: String,
+        counterparty: Option<String>,
+        tx_hash: Option<String>,
+    ) -> Result<(), JsError> {
+        let req = StorageWorkerRequest::RecordOperation {
+            address,
+            pool_contract_id,
+            op_type,
+            amount,
+            direction,
+            counterparty,
+            tx_hash,
+        };
+        match self.storage_request(req, 2_000).await? {
+            StorageWorkerResponse::Saved => Ok(()),
+            other => Err(JsError::new(&format!("Unexpected response: {:?}", other))),
+        }
+    }
+
+    #[wasm_bindgen(js_name = listOperations)]
+    pub async fn list_operations(
+        &self,
+        address: String,
+        pool_contract_id: String,
+        limit: u32,
+    ) -> Result<JsValue, JsError> {
+        let req = StorageWorkerRequest::ListOperations {
+            address,
+            pool_contract_id,
+            limit,
+        };
+        match self.storage_request(req, 2_000).await? {
+            StorageWorkerResponse::Operations(list) => Ok(serde_wasm_bindgen::to_value(&list)?),
+            other => Err(JsError::new(&format!("Unexpected response: {:?}", other))),
+        }
+    }
+
+    #[wasm_bindgen(js_name = lookupRegisteredPublicKey)]
+    pub async fn lookup_registered_public_key(&self, address: String) -> Result<JsValue, JsError> {
+        let req = StorageWorkerRequest::RecipientLookup {
+            address,
+            public_key_registry_contract_id: self
+                .fetcher
+                .contract_config()
+                .public_key_registry
+                .clone(),
+        };
+        match self.storage_request(req, 2_000).await? {
+            StorageWorkerResponse::RecipientLookup(lookup) => {
+                Ok(serde_wasm_bindgen::to_value(&lookup)?)
+            }
+            other => Err(JsError::new(&format!("Unexpected response: {:?}", other))),
+        }
+    }
+
+    #[wasm_bindgen(js_name = getOperationalFeed)]
+    pub async fn get_operational_feed(&self, limit: u32) -> Result<JsValue, JsError> {
+        let req = StorageWorkerRequest::OperationalFeed {
+            limit,
+            asp_membership_contract_id: self.fetcher.contract_config().asp_membership.clone(),
+            public_key_registry_contract_id: self
+                .fetcher
+                .contract_config()
+                .public_key_registry
+                .clone(),
+        };
+        match self.storage_request(req, 2_000).await? {
+            StorageWorkerResponse::OperationalFeed(list) => {
                 Ok(serde_wasm_bindgen::to_value(&list)?)
             }
             other => Err(JsError::new(&format!("Unexpected response: {:?}", other))),
@@ -685,8 +791,6 @@ impl WebClient {
             "disclosure",
             "sync_check",
             "Checking sync & ASP membership…",
-            None,
-            None,
         );
 
         let (inputs, network, pool_address) = loop {
@@ -695,8 +799,6 @@ impl WebClient {
                 "disclosure",
                 "fetch_chain_state",
                 "Fetching on-chain state…",
-                None,
-                None,
             );
             let data = self
                 .fetcher
@@ -727,8 +829,6 @@ impl WebClient {
                 "disclosure",
                 "load_state",
                 "Building witness inputs…",
-                None,
-                None,
             );
             match self
                 .storage_request(StorageWorkerRequest::DisclosureInputs(req), 5_000)
@@ -758,8 +858,6 @@ impl WebClient {
                         } else {
                             "Waiting to sync ledgers from the chain...".to_string()
                         },
-                        None,
-                        None,
                     );
                     TimeoutFuture::new(1_000).await;
                     continue;
@@ -773,7 +871,7 @@ impl WebClient {
             }
         };
 
-        emit_progress(&on_status, "disclosure", "prove", "Proving…", None, None);
+        emit_progress(&on_status, "disclosure", "prove", "Proving…");
         self.ping_prover()
             .await
             .map_err(|e| JsError::new(&format!("failed to load prover: {e:?}")))?;
