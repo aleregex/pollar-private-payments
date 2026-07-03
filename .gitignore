@@ -56,3 +56,8 @@ docs/book/
 ceremony/
 *.ptau
 artifacts.zip
+
+# Whitelist server
+server/.env
+server/whitelist.json
+server/node_modules/

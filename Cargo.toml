@@ -15,6 +15,7 @@ members = [
     "sdk/tx-planner",
     "sdk/types",
     "sdk/witness",
+    "server/leaf-cli",
     "tools/ceremony-cli",
 ]
 exclude = ["tools/bootnode"]

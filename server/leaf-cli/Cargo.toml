@@ -1,0 +1,27 @@
+[package]
+name = "asp-leaf-cli"
+version.workspace = true
+edition.workspace = true
+repository.workspace = true
+license.workspace = true
+publish.workspace = true
+description = "CLI wrapper over prover::crypto::asp_membership_leaf for the whitelist server"
+
+[dependencies]
+# workspace
+prover = { workspace = true }
+stellar = { workspace = true }
+stellar-private-payments-sdk = { workspace = true }
+types = { workspace = true }
+
+# external
+anyhow = { workspace = true }
+getrandom = { workspace = true, features = ["std"] }
+# TLS for native RPC calls (the SDK's wasm build delegates TLS to the browser;
+# feature unification enables rustls in the shared reqwest without touching sdk/)
+reqwest = { workspace = true, features = ["rustls"] }
+serde_json = { workspace = true, features = ["std"] }
+tokio = { workspace = true, features = ["macros", "net", "rt", "time"] }
+
+[lints]
+workspace = true

@@ -10,7 +10,11 @@
     "tailwindcss": "^4.1.18"
   },
   "dependencies": {
+    "@pollar/core": "^0.10.0",
+    "@pollar/react": "^0.10.0",
     "@stellar/freighter-api": "^6.0.1",
-    "@stellar/stellar-sdk": "^14.4.2"
+    "@stellar/stellar-sdk": "^14.4.2",
+    "react": "^19.2.7",
+    "react-dom": "^19.2.7"
   }
 }

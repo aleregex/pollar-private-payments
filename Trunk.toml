@@ -12,6 +12,11 @@ ignore = ["app/node_modules", "dist"]
 [serve]
 addresses = ["0.0.0.0"]
 port = 8000
+# Force revalidation on every load so a rebuilt WASM (with new embedded
+# contract addresses) is never served stale from the browser cache.
+# `filehash = true` is not an option here: the worker JS URLs are hardcoded
+# in app/crates/platforms/web/src/client/mod.rs (`./js/storage-worker.js`).
+headers = { "Cache-Control" = "no-cache" }
 
 [tools]
 tailwindcss = "4.1.18"
@@ -69,4 +74,8 @@ command_arguments = ["-c", """
 
 # Service worker must be served from the root (not bundled with ui.js) so it has full-page scope
 cp app/js/sw.js "$TRUNK_STAGING_DIR/sw.js"
+
+# Stylesheet for the official Pollar login modal (@pollar/react), injected at
+# runtime by app/js/pollar-modal.js
+cp app/node_modules/@pollar/react/dist/index.css "$TRUNK_STAGING_DIR/js/pollar.css"
 """]

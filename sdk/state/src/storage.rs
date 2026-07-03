@@ -17,7 +17,12 @@ const DB_NAME: &str = "poolstellar.sqlite";
 pub const APP_SETTING_BOOTNODE_CONFIG: &str = "bootnode_config";
 pub const APP_SETTING_EXPLORER: &str = "explorer";
 
-const MIGRATION_ARRAY: &[M] = &[M::up(include_str!("schema.sql"))];
+const MIGRATION_ARRAY: &[M] = &[
+    M::up(include_str!("schema.sql")),
+    M::up(include_str!(
+        "migrations/002_asp_membership_leaves_per_contract.sql"
+    )),
+];
 const MIGRATIONS: Migrations = Migrations::from_slice(MIGRATION_ARRAY);
 
 pub struct Storage {
@@ -931,10 +936,14 @@ impl Storage {
     pub fn save_leaf_added_events_batch(&mut self, events: &Vec<LeafAddedEvent>) -> Result<()> {
         let tx = self.conn.transaction()?;
         {
+            // The owning contract is recovered from the raw event so leaves
+            // are keyed per contract; `OR IGNORE` keeps re-processing of an
+            // already-saved event idempotent.
             let mut stmt = tx.prepare(
-                "INSERT INTO asp_membership_leaves (leaf_index, leaf, root, event_id)
-                    VALUES (?1, ?2, ?3, ?4)
-                    ON CONFLICT(leaf_index) DO NOTHING",
+                "INSERT OR IGNORE INTO asp_membership_leaves (contract_id, leaf_index, leaf, root, event_id)
+                    SELECT r.contract_id, ?1, ?2, ?3, ?4
+                    FROM raw_contract_events r
+                    WHERE r.id = ?4",
             )?;
 
             for event in events {

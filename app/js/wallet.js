@@ -12,6 +12,33 @@ import {
 } from '@stellar/freighter-api';
 
 import { getHandle } from './wasm-facade.js';
+import {
+    bridgeSignAuthEntry,
+    bridgeSignTransaction,
+    derivationEntropy,
+    requestWhitelistForPollarUser,
+} from './wallet-pollar.js';
+
+/**
+ * Active wallet provider: 'freighter' (default) or 'pollar'.
+ *
+ * Freighter remains the default and its code paths are untouched; the Pollar
+ * provider reroutes signing to the bridge keypair (see wallet-pollar.js) and
+ * key derivation to browser-generated entropy (Pollar has no signMessage).
+ */
+let activeProvider = 'freighter';
+
+export function setWalletProvider(provider) {
+    if (provider !== 'freighter' && provider !== 'pollar') {
+        throw new Error(`Unknown wallet provider: ${provider}`);
+    }
+    activeProvider = provider;
+}
+
+export function getWalletProvider() {
+    return activeProvider;
+}
+
 /**
  * Request wallet access and return the active public key.
  *
@@ -145,6 +172,15 @@ export function startWalletWatcher(opts) {
  * @returns {Promise<{network: string, networkUrl: string, networkPassphrase: string, sorobanRpcUrl?: string}>}
  */
 export async function getWalletNetwork() {
+    if (activeProvider === 'pollar') {
+        // Pollar has no getNetworkDetails equivalent; the app is testnet-only.
+        return {
+            network: 'TESTNET',
+            networkUrl: 'https://horizon-testnet.stellar.org',
+            networkPassphrase: 'Test SDF Network ; September 2015',
+            sorobanRpcUrl: 'https://soroban-testnet.stellar.org',
+        };
+    }
     const details = await getNetworkDetails();
     if (details?.error) {
         throw normalizeWalletError(details.error, "Failed to get Freighter network details");
@@ -184,6 +220,11 @@ function normalizeWalletError(error, fallbackMessage = "Wallet error") {
  * @returns {Promise<{signedTxXdr: string, signerAddress: string}>}
  */
 export async function signWalletTransaction(transactionXdr, opts = {}) {
+    if (activeProvider === 'pollar') {
+        // BRIDGE MODE: mock until Pollar accepts externally built Soroban XDR.
+        const signedTxXdr = await bridgeSignTransaction(transactionXdr, opts?.networkPassphrase);
+        return { signedTxXdr, signerAddress: opts?.address || null };
+    }
     await ensureFreighterReady();
 
     const { signedTxXdr, signerAddress, error } = await signTransaction(transactionXdr, opts);
@@ -206,6 +247,11 @@ export async function signWalletTransaction(transactionXdr, opts = {}) {
  * @returns {Promise<{signedAuthEntry: string | null, signerAddress: string}>}
  */
 export async function signWalletAuthEntry(entryXdr, opts = {}) {
+    if (activeProvider === 'pollar') {
+        // BRIDGE MODE: mock until Pollar exposes signAuthEntry for the pool contract.
+        const signedAuthEntry = await bridgeSignAuthEntry(entryXdr);
+        return { signedAuthEntry, signerAddress: opts?.address || null };
+    }
     await ensureFreighterReady();
 
     const { signedAuthEntry, signerAddress, error } = await signAuthEntry(entryXdr, opts);
@@ -277,6 +323,14 @@ export async function deriveKeysFromWallet(
         aspSecret = await client.getASPSecret(account);
         if (data && aspSecret?.membershipBlinding) {
             onStatus?.('Loaded privacy keys and ASP secret from local storage');
+            if (activeProvider === 'pollar') {
+                // Returning Pollar session: make sure the whitelist request/status
+                // flow is (re)started for the existing keys.
+                requestWhitelistForPollarUser({
+                    notePublicKey: data.noteKeypair.public,
+                    aspSecret: aspSecret.membershipBlinding,
+                }).catch(e => console.warn('[Pollar] whitelist hook failed:', e));
+            }
             return {
                 pubKey: data.noteKeypair.public,
                 encryptionKeypair: {
@@ -287,32 +341,49 @@ export async function deriveKeysFromWallet(
         }
     }
 
-    onStatus?.('Signature: derive privacy keys and ASP secret (does not move funds)...');
+    let signatureBytes;
+    if (activeProvider === 'pollar') {
+        // Pollar exposes no signMessage: feed browser-generated root entropy
+        // (persisted per Pollar identity) into the same derivation pipeline.
+        onStatus?.('Deriving privacy keys from local entropy (Pollar has no signMessage)...');
+        signatureBytes = await derivationEntropy();
+    } else {
+        onStatus?.('Signature: derive privacy keys and ASP secret (does not move funds)...');
 
-    let derivationResult;
-    try {
-        derivationResult = await signWalletMessage(client.keyDerivationMessage(), {
-            ...signOptions,
-            skipEnsureReady: true,
-        });
-    } catch (e) {
-        if (e.code === 'USER_REJECTED') {
-            throw new Error('Please approve the message signature to derive your privacy keys and ASP secret');
+        let derivationResult;
+        try {
+            derivationResult = await signWalletMessage(client.keyDerivationMessage(), {
+                ...signOptions,
+                skipEnsureReady: true,
+            });
+        } catch (e) {
+            if (e.code === 'USER_REJECTED') {
+                throw new Error('Please approve the message signature to derive your privacy keys and ASP secret');
+            }
+            throw e;
         }
-        throw e;
-    }
 
-    if (!derivationResult?.signedMessage) {
-        throw new Error('Key derivation signature rejected');
-    }
+        if (!derivationResult?.signedMessage) {
+            throw new Error('Key derivation signature rejected');
+        }
 
-    const signatureBytes = Uint8Array.from(atob(derivationResult.signedMessage), c => c.charCodeAt(0));
+        signatureBytes = Uint8Array.from(atob(derivationResult.signedMessage), c => c.charCodeAt(0));
+    }
     await client.deriveAndSaveUserKeys(account, signatureBytes);
 
     data = await client.getUserKeys(account);
     aspSecret = await client.getASPSecret(account);
     if (!data || !aspSecret?.membershipBlinding) {
         throw new Error('Derived privacy keys or ASP secret are unavailable');
+    }
+
+    if (activeProvider === 'pollar') {
+        // Freshly derived keys for a Pollar user: request ASP whitelisting
+        // automatically (approve stays manual on the server side).
+        requestWhitelistForPollarUser({
+            notePublicKey: data.noteKeypair.public,
+            aspSecret: aspSecret.membershipBlinding,
+        }).catch(e => console.warn('[Pollar] whitelist hook failed:', e));
     }
 
     return {

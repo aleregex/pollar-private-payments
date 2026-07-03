@@ -16,5 +16,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     updateLastVisit();
     registerServiceWorker();
 
-    Wallet.connect({ auto: true }).catch(() => {});
+    // Restore the LAST provider the user connected with ('pollar' restores the
+    // persisted Pollar session without any modal; 'freighter' keeps the old
+    // silent reconnect). With nothing stored, never auto-connect — the user
+    // picks via the Login button.
+    const lastProvider = localStorage.getItem('walletProvider');
+    if (lastProvider) {
+        Wallet.connect({ auto: true, provider: lastProvider }).catch(() => {});
+    }
 });

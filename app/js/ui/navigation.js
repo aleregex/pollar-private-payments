@@ -1,9 +1,59 @@
-import { connectWallet, getWalletNetwork, startWalletWatcher } from '../wallet.js';
+import { connectWallet, getWalletNetwork, setWalletProvider, startWalletWatcher } from '../wallet.js';
+import {
+    ensureBridgeAccount,
+    ensureBridgeTrustlines,
+    getPollarAuthStep,
+    isPollarSessionFresh,
+    pollarLogout,
+    restorePollarSessionSettled,
+    stopWhitelistStatusPolling,
+    waitForPollarAuthenticated,
+} from '../wallet-pollar.js';
+import { openPollarLoginModal, waitForLoginModalClosed } from '../pollar-modal.js';
 import { getHandle, initializeWasm } from '../wasm-facade.js';
 import { App, Toast, Utils } from './core.js';
 import { closeAppPool, createAppPool } from './pool.js';
 import { runOnboardingWizard } from './onboarding-wizard.js';
 import { isDbLockedError, showDbLockedModal } from '../db-locked.js';
+
+/**
+ * Minimal provider-selection dialog: Freighter (extension signing) or Pollar
+ * (official @pollar/react login modal — Google / email OTP; bridge-mode
+ * signing). Built dynamically so index.html stays untouched. Resolves with
+ * 'freighter' | 'pollar' | null (dismissed).
+ */
+function showWalletProviderModal() {
+    return new Promise(resolve => {
+        const overlay = document.createElement('div');
+        overlay.style.cssText = 'position:fixed;inset:0;z-index:9998;background:rgba(2,6,23,0.7);display:flex;align-items:center;justify-content:center;';
+        const card = document.createElement('div');
+        card.style.cssText = 'background:#0f172a;border:1px solid #334155;border-radius:16px;padding:24px;width:320px;font-family:system-ui,sans-serif;color:#e2e8f0;';
+        card.innerHTML = '<div style="font-weight:700;font-size:16px;margin-bottom:14px">Connect a wallet</div>';
+
+        const mkBtn = (label, value, subtitle) => {
+            const b = document.createElement('button');
+            b.type = 'button';
+            b.style.cssText = 'display:block;width:100%;text-align:left;margin-bottom:10px;padding:12px 14px;border-radius:10px;border:1px solid #334155;background:#1e293b;color:#e2e8f0;cursor:pointer;font-size:14px;';
+            b.innerHTML = `<div style="font-weight:600">${label}</div><div style="font-size:12px;color:#94a3b8">${subtitle}</div>`;
+            b.addEventListener('click', () => { cleanup(); resolve(value); });
+            return b;
+        };
+        card.appendChild(mkBtn('Freighter', 'freighter', 'Browser extension — signs locally'));
+        card.appendChild(mkBtn('Continue with Pollar', 'pollar', 'Google / email — custodial wallet, bridge signing'));
+
+        const cancel = document.createElement('button');
+        cancel.type = 'button';
+        cancel.textContent = 'Cancel';
+        cancel.style.cssText = 'width:100%;margin-top:4px;padding:8px;border:none;background:none;color:#94a3b8;cursor:pointer;font-size:13px;';
+        cancel.addEventListener('click', () => { cleanup(); resolve(null); });
+        card.appendChild(cancel);
+
+        const cleanup = () => overlay.remove();
+        overlay.addEventListener('click', (e) => { if (e.target === overlay) { cleanup(); resolve(null); } });
+        overlay.appendChild(card);
+        document.body.appendChild(overlay);
+    });
+}
 
 function isRpcSyncGapError(message) {
     return typeof message === 'string' && (message.startsWith('RPC_SYNC_GAP') || message.includes('RPC sync gap'));
@@ -106,10 +156,20 @@ function renderWallet() {
     const walletText = document.getElementById('wallet-text');
     const walletBtn = document.getElementById('wallet-btn');
     const walletAddress = document.getElementById('settings-wallet-address');
-    walletText.textContent = connected ? Utils.shortAddress(App.state.wallet.address, 8, 6) : '';
+    const pollar = App.state.wallet.pollar;
+    walletText.textContent = connected
+        ? (pollar
+            ? `${pollar.email || 'Pollar'} · ${Utils.shortAddress(App.state.wallet.address, 6, 4)}`
+            : Utils.shortAddress(App.state.wallet.address, 8, 6))
+        : '';
+    if (connected && pollar) {
+        walletText.title = `Pollar (custodial): ${pollar.address || '—'} · bridge signer: ${App.state.wallet.address}`;
+    }
     walletText.classList.toggle('hidden', !connected);
     walletBtn?.classList.toggle('hidden', connected);
-    walletAddress.textContent = App.state.wallet.address || 'Not connected';
+    walletAddress.textContent = pollar
+        ? `${App.state.wallet.address || '—'} (bridge signer) · Pollar: ${pollar.address || '—'}`
+        : (App.state.wallet.address || 'Not connected');
     document.getElementById('network-name').textContent = App.state.wallet.network?.toUpperCase() || 'NETWORK';
     renderSyncStatus();
 }
@@ -229,22 +289,85 @@ export const Wallet = {
     _stopWatcher: null,
 
     init() {
-        document.getElementById('wallet-btn')?.addEventListener('click', () => {
+        document.getElementById('wallet-btn')?.addEventListener('click', async (event) => {
             if (App.state.wallet.connected) {
                 this.openSettings();
-            } else {
-                this.connect({ auto: false }).catch(() => {});
+                return;
             }
+            // Primary flow: straight into the official Pollar login modal.
+            // Alt/Option+click keeps the provider chooser (Freighter) available
+            // for development and regression testing.
+            let provider = 'pollar';
+            if (event.altKey) {
+                provider = await showWalletProviderModal();
+                if (!provider) return;
+            }
+            this.connect({ auto: false, provider }).catch(() => {});
         });
         renderWallet();
     },
 
-    async connect({ auto = false } = {}) {
+    async connect({ auto = false, provider = 'freighter' } = {}) {
         if (this._connectPromise) return this._connectPromise;
 
         this._connectPromise = (async () => {
             try {
-                const address = await connectWallet();
+                setWalletProvider(provider === 'freighter' ? 'freighter' : 'pollar');
+
+                let address;
+                if (provider === 'freighter') {
+                    address = await connectWallet();
+                } else {
+                    // Pollar social login through the OFFICIAL @pollar/react
+                    // login modal (Google / email OTP per Dashboard config).
+                    // Identity is custodial/real; pool signing runs in BRIDGE
+                    // MODE — see wallet-pollar.js.
+                    if (auto) {
+                        // Page reload: silently restore the persisted session
+                        // (waits for the SDK's async restore). Never pops UI.
+                        const session = await restorePollarSessionSettled();
+                        if (!session?.pollarAddress) {
+                            throw new Error('No persisted Pollar session');
+                        }
+                    } else {
+                        // Explicit Login click: require a REAL login. A session
+                        // merely restored from storage is discarded so the
+                        // modal is shown and nothing proceeds until the user
+                        // actually picks a method and authenticates. A login
+                        // completed in this page load (e.g. retried inside the
+                        // modal) is honored as-is.
+                        const session = await restorePollarSessionSettled();
+                        if (!(session?.pollarAddress && isPollarSessionFresh())) {
+                            await pollarLogout();
+                            await openPollarLoginModal();
+                            // Closing the modal without authenticating cancels
+                            // the connect instead of leaving it hanging. The
+                            // modal legitimately closes during the OAuth popup
+                            // phase, so after a close we only cancel once the
+                            // auth flow settles in a state that needs the (now
+                            // closed) modal.
+                            const dismissed = (async () => {
+                                await waitForLoginModalClosed();
+                                for (;;) {
+                                    const step = getPollarAuthStep();
+                                    if (step === 'authenticated') {
+                                        return new Promise(() => {}); // other branch wins
+                                    }
+                                    if (['idle', 'error', 'entering_email', 'entering_code'].includes(step)) {
+                                        const err = new Error('Login cancelled');
+                                        err.code = 'USER_REJECTED';
+                                        throw err;
+                                    }
+                                    await new Promise(r => setTimeout(r, 500));
+                                }
+                            })();
+                            await Promise.race([waitForPollarAuthenticated(), dismissed]);
+                        }
+                    }
+                    const bridge = await ensureBridgeAccount();
+                    App.state.wallet.pollar = { address: bridge.pollarAddress, email: bridge.email };
+                    address = bridge.address; // BRIDGE MODE signer account
+                }
                 const { network, networkPassphrase, sorobanRpcUrl } = await getWalletNetwork();
                 const rpcUrl = sorobanRpcUrl || '';
                 if (!rpcUrl.toLowerCase().includes('testnet')) {
@@ -281,11 +404,19 @@ export const Wallet = {
                 App.state.keys.aspSecret = keys?.aspSecret || null;
 
                 await loadRuntimeState();
+                if (provider !== 'freighter') {
+                    // BRIDGE MODE: the bridge account needs trustlines for the
+                    // classic-asset pools (e.g. USDC) before it can deposit.
+                    await ensureBridgeTrustlines(App.state.pools);
+                }
                 renderSettingsDrawer();
                 renderWallet();
                 App.events.dispatchEvent(new CustomEvent('wallet:ready', { detail: { address } }));
                 await createAppPool();
-                this.startWatcher();
+                if (provider === 'freighter') this.startWatcher();
+                // Remember the provider so page reloads restore THIS session
+                // (and never silently grab the other wallet).
+                localStorage.setItem('walletProvider', provider === 'freighter' ? 'freighter' : 'pollar');
                 if (!auto) Toast.show('Wallet connected', 'success');
             } catch (error) {
                 this.disconnect();
@@ -323,6 +454,8 @@ export const Wallet = {
     disconnect() {
         this._stopWatcher?.();
         this._stopWatcher = null;
+        stopWhitelistStatusPolling();
+        localStorage.removeItem('walletProvider');
         closeAppPool();
         App.state.wallet = {
             connected: false,

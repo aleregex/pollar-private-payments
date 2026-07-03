@@ -1,0 +1,17 @@
+{
+  "name": "pollar-whitelist-server",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Minimal ASP whitelist backend: stores requests and inserts approved leaves into the ASP membership contract",
+  "main": "index.js",
+  "scripts": {
+    "dev": "node --watch index.js",
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.21.2"
+  }
+}
