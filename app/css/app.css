@@ -8,38 +8,44 @@
 @source not "../../dist";
 
 @theme {
-  --color-brand-50: #ebf8ff;
-  --color-brand-100: #cfe9ff;
-  --color-brand-200: #add7ff;
-  --color-brand-300: #84c2ff;
-  --color-brand-400: #58a6ff;
-  --color-brand-500: #3f8aff;
-  --color-brand-600: #2f6dff;
-  --color-brand-700: #244fd3;
-  --color-brand-800: #1e3f9f;
-  --color-brand-900: #1a336f;
+  /* Pollar brand blue, matching the pollar.xyz landing:
+     primary #005DB4, primary-hover #0047a0. */
+  --color-brand-50: #eaf3fb;
+  --color-brand-100: #d3e6f8;
+  --color-brand-200: #a7cdf1;
+  --color-brand-300: #74afe6;
+  --color-brand-400: #3d8dd6;
+  --color-brand-500: #1274c4;
+  --color-brand-600: #0066bd;
+  --color-brand-700: #005db4;
+  --color-brand-800: #0047a0;
+  --color-brand-900: #033a7e;
 
-  --color-dark-50: #f8fbff;
-  --color-dark-100: #e6eefc;
-  --color-dark-200: #ccd9ef;
-  --color-dark-300: #aebdd6;
-  --color-dark-400: #7e91ae;
-  --color-dark-500: #5d6d88;
-  --color-dark-600: #3f4d64;
-  --color-dark-700: #243044;
-  --color-dark-800: #151f31;
-  --color-dark-900: #0b1423;
-  --color-dark-950: #040914;
+  /* Light Pollar theme: the "dark" scale is inverted (50 = darkest text,
+     950 = page background) so existing bg-dark-9xx / text-dark-xxx usages
+     resolve to light surfaces and dark text without touching markup. */
+  --color-dark-50: #0f172a;
+  --color-dark-100: #1e293b;
+  --color-dark-200: #334155;
+  --color-dark-300: #475569;
+  --color-dark-400: #64748b;
+  --color-dark-500: #94a3b8;
+  --color-dark-600: #cbd5e1;
+  --color-dark-700: #e2e8f0;
+  --color-dark-800: #f1f5f9;
+  --color-dark-900: #ffffff;
+  --color-dark-950: #f8fafc;
 
-  --color-ink-950: #040914;
-  --color-ink-900: #0b1423;
-  --color-ink-850: #101b2d;
-  --color-ink-800: #16233a;
+  /* "ink" surfaces: white cards / soft gray insets on the light theme. */
+  --color-ink-950: #ffffff;
+  --color-ink-900: #f8fafc;
+  --color-ink-850: #f1f5f9;
+  --color-ink-800: #e2e8f0;
 
   --font-sans: "Manrope", ui-sans-serif, system-ui;
   --font-mono: "JetBrains Mono", monospace;
 
-  --color-border: rgba(255, 255, 255, 0.08);
+  --color-border: #e2e8f0;
 }
 
 @layer base {
@@ -48,7 +54,7 @@
   }
 
   html {
-    color-scheme: dark;
+    color-scheme: light;
   }
 
   button:not(:disabled) {
@@ -56,33 +62,33 @@
   }
 
   /* Themed <select>: hide native chrome and draw a slate chevron so dropdowns
-     match the navy UI. (The open option list is OS-rendered; we colour the
-     options for dark mode but its exact look is browser-controlled.) */
+     match the light UI. (The open option list is OS-rendered; we colour the
+     options but its exact look is browser-controlled.) */
   select {
     -webkit-appearance: none;
     -moz-appearance: none;
     appearance: none;
     cursor: pointer;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
     background-repeat: no-repeat;
     background-position: right 0.9rem center;
     background-size: 1rem 1rem;
   }
 
   select option {
-    background-color: #0b1423;
-    color: #e2e8f0;
+    background-color: #ffffff;
+    color: #0f172a;
   }
 
   body {
     background:
-      radial-gradient(circle at top, rgba(63, 138, 255, 0.12), transparent 32%),
-      linear-gradient(180deg, #040914 0%, #061021 48%, #040914 100%);
+      radial-gradient(circle at top, rgba(0, 93, 180, 0.05), transparent 36%),
+      #f8fafc;
   }
 
   ::selection {
-    background: rgba(116, 197, 255, 0.3);
-    color: #f8fbff;
+    background: rgba(0, 93, 180, 0.18);
+    color: #0f172a;
   }
 }
 
@@ -103,20 +109,20 @@
     -webkit-appearance: none;
     width: 18px;
     height: 18px;
-    background: linear-gradient(135deg, #74c5ff, #2f6dff);
+    background: #005db4;
     border-radius: 9999px;
     cursor: grab;
-    box-shadow: 0 2px 12px rgba(63, 138, 255, 0.45);
+    box-shadow: 0 2px 10px rgba(0, 93, 180, 0.35);
   }
 
   input[type="range"]::-moz-range-thumb {
     width: 18px;
     height: 18px;
-    background: linear-gradient(135deg, #74c5ff, #2f6dff);
+    background: #005db4;
     border: none;
     border-radius: 9999px;
     cursor: grab;
-    box-shadow: 0 2px 12px rgba(63, 138, 255, 0.45);
+    box-shadow: 0 2px 10px rgba(0, 93, 180, 0.35);
   }
 
   @keyframes pulse-dot {

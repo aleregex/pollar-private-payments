@@ -3,6 +3,8 @@ import { App, Toast, Utils } from './core.js';
 import { ensureAppPool } from './pool.js';
 import { Templates } from './templates.js';
 import { OpHistory } from './op-history.js';
+import { ensureBridgeFunds } from '../wallet-pollar.js';
+import { getWalletProvider } from '../wallet.js';
 
 const DECIMALS = 7;
 const N_OUTPUTS = 2;
@@ -217,6 +219,16 @@ export const Transactions = {
                 if (!amount.ok || amount.value <= 0n) throw new Error(amount.error || 'Enter a deposit amount');
                 setLoading(button, true, 'Preparing deposit…');
                 const pool = selectedPool();
+                if (getWalletProvider() === 'pollar'
+                    && !App.state.wallet.pollar?.custodial
+                    && pool?.asset?.kind === 'classic') {
+                    // Bridge mode: the user's tokens live in their Pollar
+                    // wallet — move the deposit amount to the bridge signer
+                    // with a custodial Pollar payment first.
+                    setLoading(button, true, 'Moving funds from your Pollar wallet…');
+                    await ensureBridgeFunds(pool.asset, amount.value);
+                    setLoading(button, true, 'Preparing deposit…');
+                }
                 const session = await ensureAppPool();
                 const result = await session.deposit(
                     amount.value,

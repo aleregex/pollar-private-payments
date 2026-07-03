@@ -137,9 +137,9 @@ export const Toast = {
         msgEl.textContent = String(message ?? '');
         msgEl.title = String(message ?? '');
 
-        const dot = type === 'info' ? 'bg-slate-300' : type === 'error' ? 'bg-rose-400' : 'bg-cyan-300';
-        const border = type === 'info' ? 'border-slate-400/40' : type === 'error' ? 'border-rose-400/40' : 'border-cyan-400/40';
-        icon?.classList.remove('bg-cyan-300');
+        const dot = type === 'info' ? 'bg-slate-400' : type === 'error' ? 'bg-rose-500' : 'bg-brand-600';
+        const border = type === 'info' ? 'border-slate-300' : type === 'error' ? 'border-rose-300' : 'border-brand-300';
+        icon?.classList.remove('bg-brand-600');
         icon?.classList.add(dot);
         toast.classList.add(border);
 

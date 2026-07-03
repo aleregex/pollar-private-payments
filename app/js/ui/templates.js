@@ -68,10 +68,10 @@ export const Templates = {
         const status = row.querySelector('.note-status');
         if (note.spent) {
             status.textContent = 'Spent';
-            status.className = 'note-status inline-flex rounded-full border border-rose-400/30 bg-rose-400/10 px-2 py-1 text-[11px] font-medium text-rose-200';
+            status.className = 'note-status inline-flex rounded-lg border border-rose-200 bg-rose-50 px-2 py-1 text-[11px] font-medium text-rose-600';
         } else {
             status.textContent = 'Available';
-            status.className = 'note-status inline-flex rounded-full border border-cyan-400/30 bg-cyan-400/10 px-2 py-1 text-[11px] font-medium text-cyan-100';
+            status.className = 'note-status inline-flex rounded-lg border border-brand-200 bg-brand-50 px-2 py-1 text-[11px] font-medium text-brand-700';
         }
 
         // A spent note can't be used as a transact input — hide its Use button.

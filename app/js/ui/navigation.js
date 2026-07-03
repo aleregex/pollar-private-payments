@@ -3,12 +3,18 @@ import {
     ensureBridgeAccount,
     ensureBridgeTrustlines,
     getPollarAuthStep,
+    getPollarSession,
     isPollarSessionFresh,
     pollarLogout,
     restorePollarSessionSettled,
+    setCustodialMode,
     stopWhitelistStatusPolling,
     waitForPollarAuthenticated,
 } from '../wallet-pollar.js';
+import {
+    ensureCustodialTrustlines,
+    probeCustodialSigning,
+} from '../wallet-pollar-custodial.js';
 import { openPollarLoginModal, waitForLoginModalClosed } from '../pollar-modal.js';
 import { getHandle, initializeWasm } from '../wasm-facade.js';
 import { App, Toast, Utils } from './core.js';
@@ -103,9 +109,9 @@ function setActiveView(view) {
     App.state.views.active = view;
     document.querySelectorAll('[data-view]').forEach(btn => {
         const active = btn.dataset.view === view;
-        btn.classList.toggle('bg-cyan-400/15', active);
-        btn.classList.toggle('text-cyan-100', active);
-        btn.classList.toggle('text-slate-400', !active);
+        btn.classList.toggle('bg-brand-100', active);
+        btn.classList.toggle('text-brand-700', active);
+        btn.classList.toggle('text-slate-500', !active);
     });
     document.querySelectorAll('.view-panel').forEach(panel => {
         panel.classList.toggle('hidden', panel.dataset.viewPanel !== view);
@@ -116,9 +122,9 @@ function setMoveFlow(flow) {
     App.state.views.moveFlow = flow;
     document.querySelectorAll('[data-move-flow]').forEach(btn => {
         const active = btn.dataset.moveFlow === flow;
-        btn.classList.toggle('bg-cyan-400', active);
-        btn.classList.toggle('text-slate-950', active);
-        btn.classList.toggle('text-slate-300', !active);
+        btn.classList.toggle('bg-brand-700', active);
+        btn.classList.toggle('text-white', active);
+        btn.classList.toggle('text-slate-600', !active);
     });
     document.querySelectorAll('.move-flow-panel').forEach(panel => {
         panel.classList.toggle('hidden', panel.dataset.movePanel !== flow);
@@ -157,18 +163,23 @@ function renderWallet() {
     const walletBtn = document.getElementById('wallet-btn');
     const walletAddress = document.getElementById('settings-wallet-address');
     const pollar = App.state.wallet.pollar;
+    // Pollar sessions surface ONE wallet: the user's Pollar address. In
+    // bridge mode the local signer is a technical detail, shown only as a
+    // secondary note in Settings.
     walletText.textContent = connected
         ? (pollar
-            ? `${pollar.email || 'Pollar'} · ${Utils.shortAddress(App.state.wallet.address, 6, 4)}`
+            ? `${pollar.email || 'Pollar'} · ${Utils.shortAddress(pollar.address || App.state.wallet.address, 6, 4)}`
             : Utils.shortAddress(App.state.wallet.address, 8, 6))
         : '';
     if (connected && pollar) {
-        walletText.title = `Pollar (custodial): ${pollar.address || '—'} · bridge signer: ${App.state.wallet.address}`;
+        walletText.title = `Pollar wallet: ${pollar.address || '—'}`;
     }
     walletText.classList.toggle('hidden', !connected);
     walletBtn?.classList.toggle('hidden', connected);
     walletAddress.textContent = pollar
-        ? `${App.state.wallet.address || '—'} (bridge signer) · Pollar: ${pollar.address || '—'}`
+        ? (pollar.custodial
+            ? `${pollar.address || '—'}`
+            : `${pollar.address || '—'} · signing bridge (technical): ${Utils.shortAddress(App.state.wallet.address, 6, 4)}`)
         : (App.state.wallet.address || 'Not connected');
     document.getElementById('network-name').textContent = App.state.wallet.network?.toUpperCase() || 'NETWORK';
     renderSyncStatus();
@@ -188,8 +199,8 @@ function renderSyncStatus() {
     const synced = !!App.state.profile?.registryLookup?.registryFullySynced;
     text.textContent = synced ? 'Synced' : 'Syncing';
     dot.className = synced
-        ? 'h-2 w-2 rounded-full bg-emerald-400 shadow-[0_0_18px_rgba(52,211,153,0.7)]'
-        : 'h-2 w-2 rounded-full bg-amber-300 animate-pulse-dot';
+        ? 'h-2 w-2 rounded-full bg-emerald-500'
+        : 'h-2 w-2 rounded-full bg-amber-400 animate-pulse-dot';
 }
 
 function renderSettingsDrawer() {
@@ -364,9 +375,10 @@ export const Wallet = {
                             await Promise.race([waitForPollarAuthenticated(), dismissed]);
                         }
                     }
-                    const bridge = await ensureBridgeAccount();
-                    App.state.wallet.pollar = { address: bridge.pollarAddress, email: bridge.email };
-                    address = bridge.address; // BRIDGE MODE signer account
+                    // Signer account (custodial Pollar wallet vs bridge
+                    // keypair) is decided after WASM init, when the pool
+                    // contract id needed for the custodial probe is available.
+                    address = null;
                 }
                 const { network, networkPassphrase, sorobanRpcUrl } = await getWalletNetwork();
                 const rpcUrl = sorobanRpcUrl || '';
@@ -394,6 +406,42 @@ export const Wallet = {
                     bootnodeRequired = true;
                 }
 
+                if (provider !== 'freighter') {
+                    const session = getPollarSession();
+                    // Only platform-custodied (social login) sessions are
+                    // supported on the Pollar path. An external-wallet session
+                    // (Freighter through Pollar's modal) can't sign custodially
+                    // and would route signing prompts to the extension with
+                    // incompatible payloads — drop it and ask for a re-login.
+                    if (session?.custody && session.custody !== 'internal') {
+                        await pollarLogout();
+                        throw new Error('Please sign in with Google or email. (For Freighter, use the native option: ⌥-click Login.)');
+                    }
+                    // Decide the signer account. Probe whether Pollar's
+                    // backend custodially signs auth entries for the pool
+                    // contract (per-app allowlist). If yes: REAL custodial
+                    // mode — the Pollar wallet signs everything via KMS and
+                    // no bridge keypair exists. If no: BRIDGE MODE fallback.
+                    const config = await getHandle().webClient.contractConfig();
+                    const poolId = (config?.pools || []).find(p => p?.enabled)?.poolContractId;
+                    const probe = poolId
+                        ? await probeCustodialSigning(poolId)
+                        : { available: false, details: 'no pool id' };
+                    setCustodialMode(probe.available);
+                    if (probe.available) {
+                        address = session.pollarAddress;
+                        App.state.wallet.pollar = { address: session.pollarAddress, email: session.email, custodial: true };
+                        Toast.show('Pollar custodial signing enabled (KMS)', 'success', 5000);
+                    } else {
+                        console.warn('[Pollar] custodial signing unavailable, using bridge:', probe.details);
+                        const bridge = await ensureBridgeAccount();
+                        App.state.wallet.pollar = { address: bridge.pollarAddress, email: bridge.email, custodial: false };
+                        address = bridge.address; // BRIDGE MODE signer account
+                    }
+                    App.state.wallet.address = address;
+                    renderWallet();
+                }
+
                 const keys = await runOnboardingWizard({
                     address,
                     networkPassphrase,
@@ -405,9 +453,14 @@ export const Wallet = {
 
                 await loadRuntimeState();
                 if (provider !== 'freighter') {
-                    // BRIDGE MODE: the bridge account needs trustlines for the
+                    // The signer account needs trustlines for the
                     // classic-asset pools (e.g. USDC) before it can deposit.
-                    await ensureBridgeTrustlines(App.state.pools);
+                    if (App.state.wallet.pollar?.custodial) {
+                        await ensureCustodialTrustlines(App.state.pools).catch(e =>
+                            console.warn('[Pollar] custodial trustlines failed:', e));
+                    } else {
+                        await ensureBridgeTrustlines(App.state.pools);
+                    }
                 }
                 renderSettingsDrawer();
                 renderWallet();
@@ -455,6 +508,7 @@ export const Wallet = {
         this._stopWatcher?.();
         this._stopWatcher = null;
         stopWhitelistStatusPolling();
+        setCustodialMode(false);
         localStorage.removeItem('walletProvider');
         closeAppPool();
         App.state.wallet = {

@@ -93,10 +93,10 @@ function makeButton({ text, variant = 'secondary', onClick }) {
     btn.type = 'button';
     btn.textContent = text;
     btn.className = variant === 'primary'
-        ? 'rounded-2xl bg-[linear-gradient(135deg,#74c5ff,#2f6dff)] px-5 py-3 text-sm font-semibold text-ink-950 shadow-[0_12px_30px_rgba(63,138,255,0.45)] transition hover:brightness-110 disabled:opacity-60'
+        ? 'rounded-lg bg-brand-700 px-5 py-3 text-sm font-semibold text-white shadow-md shadow-brand-700/20 transition hover:brightness-110 disabled:opacity-60'
         : variant === 'ghost'
-            ? 'rounded-2xl border border-white/10 px-5 py-3 text-sm font-medium text-slate-300 transition hover:border-cyan-300/30 hover:text-cyan-100 disabled:opacity-60'
-            : 'rounded-2xl border border-white/10 bg-white/[0.03] px-5 py-3 text-sm font-medium text-slate-200 transition hover:border-cyan-300/30 hover:text-cyan-100 disabled:opacity-60';
+            ? 'rounded-lg border border-slate-200 px-5 py-3 text-sm font-medium text-slate-600 transition hover:border-brand-400 hover:text-brand-700 disabled:opacity-60'
+            : 'rounded-lg border border-slate-200 bg-white px-5 py-3 text-sm font-medium text-slate-700 transition hover:border-brand-400 hover:text-brand-700 disabled:opacity-60';
     if (onClick) btn.addEventListener('click', onClick);
     return btn;
 }
@@ -107,15 +107,15 @@ function makePanel({ eyebrow, title, body, aside }) {
 
     const intro = document.createElement('div');
     const eyebrowEl = document.createElement('p');
-    eyebrowEl.className = 'text-[11px] font-semibold uppercase tracking-[0.28em] text-cyan-200/70';
+    eyebrowEl.className = 'text-[11px] font-semibold uppercase tracking-[0.28em] text-brand-700';
     eyebrowEl.textContent = eyebrow;
     const titleEl = document.createElement('h3');
-    titleEl.className = 'mt-2 text-2xl font-semibold tracking-tight text-white';
+    titleEl.className = 'mt-2 text-2xl font-semibold tracking-tight text-slate-900';
     titleEl.textContent = title;
     intro.append(eyebrowEl, titleEl);
     if (body) {
         const bodyEl = document.createElement('p');
-        bodyEl.className = 'mt-3 text-sm leading-6 text-slate-300';
+        bodyEl.className = 'mt-3 text-sm leading-6 text-slate-600';
         bodyEl.textContent = body;
         intro.appendChild(bodyEl);
     }
@@ -123,7 +123,7 @@ function makePanel({ eyebrow, title, body, aside }) {
 
     if (aside) {
         const info = document.createElement('div');
-        info.className = 'rounded-[24px] border border-white/8 bg-ink-950/70 p-5 text-sm leading-6 text-slate-300';
+        info.className = 'rounded-xl border border-slate-200 bg-ink-950/70 p-5 text-sm leading-6 text-slate-600';
         if (typeof aside === 'string') {
             info.textContent = aside;
         } else {
@@ -140,22 +140,22 @@ function setStepState(stepId, state) {
     if (!el) return;
     el.dataset.state = state;
     el.classList.remove(
-        'border-white/8',
-        'bg-white/[0.03]',
-        'text-slate-400',
-        'border-cyan-300/30',
-        'bg-cyan-300/10',
-        'text-cyan-100',
-        'border-emerald-300/30',
-        'bg-emerald-300/10',
-        'text-emerald-100'
+        'border-slate-200',
+        'bg-white',
+        'text-slate-500',
+        'border-brand-300',
+        'bg-brand-50',
+        'text-brand-700',
+        'border-emerald-300',
+        'bg-emerald-50',
+        'text-emerald-700'
     );
     if (state === 'current') {
-        el.classList.add('border-cyan-300/30', 'bg-cyan-300/10', 'text-cyan-100');
+        el.classList.add('border-brand-300', 'bg-brand-50', 'text-brand-700');
     } else if (state === 'done') {
-        el.classList.add('border-emerald-300/30', 'bg-emerald-300/10', 'text-emerald-100');
+        el.classList.add('border-emerald-300', 'bg-emerald-50', 'text-emerald-700');
     } else {
-        el.classList.add('border-white/8', 'bg-white/[0.03]', 'text-slate-400');
+        el.classList.add('border-slate-200', 'bg-white', 'text-slate-500');
     }
 }
 
@@ -178,7 +178,7 @@ function renderDisclaimerMarkdown(md, container) {
     const flushCode = () => {
         if (!codeLines.length) return;
         const pre = document.createElement('pre');
-        pre.className = 'overflow-auto rounded-2xl border border-white/8 bg-ink-950 px-4 py-3 text-xs text-slate-200';
+        pre.className = 'overflow-auto rounded-lg border border-slate-200 bg-ink-950 px-4 py-3 text-xs text-slate-700';
         pre.textContent = codeLines.join('\n');
         container.appendChild(pre);
         codeLines = [];
@@ -212,7 +212,7 @@ function renderDisclaimerMarkdown(md, container) {
             const level = headingMatch[1].length;
             const text = headingMatch[2].trim();
             const heading = document.createElement(level === 1 ? 'h4' : 'h5');
-            heading.className = level === 1 ? 'text-lg font-semibold text-white' : 'text-sm font-semibold text-white';
+            heading.className = level === 1 ? 'text-lg font-semibold text-slate-900' : 'text-sm font-semibold text-slate-900';
             heading.textContent = text;
             container.appendChild(heading);
             continue;
@@ -364,7 +364,7 @@ export async function runOnboardingWizard({ address, networkPassphrase, bootnode
 
         if (stepId === 'disclaimer') {
             const markdown = document.createElement('div');
-            markdown.className = 'space-y-3 text-sm text-slate-300';
+            markdown.className = 'space-y-3 text-sm text-slate-600';
             renderDisclaimerMarkdown(disclaimerState?.disclaimerTextMd || '', markdown);
             const panel = makePanel({
                 eyebrow: `Step ${STEP_ORDER.indexOf(stepId) + 1} of ${STEP_ORDER.length}`,
@@ -399,7 +399,7 @@ export async function runOnboardingWizard({ address, networkPassphrase, bootnode
             const statusWrap = document.createElement('p');
             statusWrap.append('Current status: ');
             const statusValue = document.createElement('span');
-            statusValue.className = 'font-semibold text-white';
+            statusValue.className = 'font-semibold text-slate-900';
             statusValue.textContent = persisted ? 'already persisted' : 'not persisted yet';
             statusWrap.appendChild(statusValue);
             const panel = makePanel({
@@ -429,7 +429,7 @@ export async function runOnboardingWizard({ address, networkPassphrase, bootnode
                             const granted = await persistStorageIfWanted();
                             setPersistPromptedFlag();
                             statusValue.textContent = granted ? 'granted — storage is now persistent' : 'denied by the browser';
-                            statusValue.className = granted ? 'font-semibold text-emerald-200' : 'font-semibold text-amber-200';
+                            statusValue.className = granted ? 'font-semibold text-emerald-600' : 'font-semibold text-amber-600';
                             renderActions([makeButton({ text: 'Continue', variant: 'primary', onClick: () => resolve() })]);
                         } catch (error) {
                             request.disabled = false;
@@ -506,7 +506,7 @@ export async function runOnboardingWizard({ address, networkPassphrase, bootnode
 
             if (bootnodeRequired) {
                 const requiredNote = document.createElement('p');
-                requiredNote.className = 'mt-4 text-sm text-amber-200';
+                requiredNote.className = 'mt-4 text-sm text-amber-600';
                 requiredNote.textContent = 'The public RPC is missing event history (sync gap), so a bootnode archive URL is required to join the app.';
                 bootnodeBox.appendChild(requiredNote);
             }
@@ -514,9 +514,9 @@ export async function runOnboardingWizard({ address, networkPassphrase, bootnode
             let permStatus = null;
             if (enableNotifications) {
                 const notif = document.createElement('div');
-                notif.className = 'rounded-[24px] border border-white/8 bg-white/[0.03] p-5 text-sm text-slate-300 space-y-2';
+                notif.className = 'rounded-xl border border-slate-200 bg-white p-5 text-sm text-slate-600 space-y-2';
                 const notifTitle = document.createElement('p');
-                notifTitle.className = 'font-medium text-white';
+                notifTitle.className = 'font-medium text-slate-900';
                 notifTitle.textContent = 'Browser reminder';
                 const notifBody = document.createElement('p');
                 notifBody.textContent = 'If you choose to rely on RPC only, you can allow notifications so the app can remind you to reopen the tab before retention becomes a problem.';

@@ -16,8 +16,13 @@ import {
     bridgeSignAuthEntry,
     bridgeSignTransaction,
     derivationEntropy,
+    isCustodialMode,
     requestWhitelistForPollarUser,
 } from './wallet-pollar.js';
+import {
+    custodialSignAuthEntry,
+    custodialSignTransaction,
+} from './wallet-pollar-custodial.js';
 
 /**
  * Active wallet provider: 'freighter' (default) or 'pollar'.
@@ -221,6 +226,11 @@ function normalizeWalletError(error, fallbackMessage = "Wallet error") {
  */
 export async function signWalletTransaction(transactionXdr, opts = {}) {
     if (activeProvider === 'pollar') {
+        if (isCustodialMode()) {
+            // REAL custodial signing: Pollar's KMS signs the envelope.
+            const signedTxXdr = await custodialSignTransaction(transactionXdr);
+            return { signedTxXdr, signerAddress: opts?.address || null };
+        }
         // BRIDGE MODE: mock until Pollar accepts externally built Soroban XDR.
         const signedTxXdr = await bridgeSignTransaction(transactionXdr, opts?.networkPassphrase);
         return { signedTxXdr, signerAddress: opts?.address || null };
@@ -248,6 +258,12 @@ export async function signWalletTransaction(transactionXdr, opts = {}) {
  */
 export async function signWalletAuthEntry(entryXdr, opts = {}) {
     if (activeProvider === 'pollar') {
+        if (isCustodialMode()) {
+            // REAL custodial signing: Pollar's KMS signs the auth entry
+            // (preimage → entry conversion in wallet-pollar-custodial.js).
+            const signedAuthEntry = await custodialSignAuthEntry(entryXdr);
+            return { signedAuthEntry, signerAddress: opts?.address || null };
+        }
         // BRIDGE MODE: mock until Pollar exposes signAuthEntry for the pool contract.
         const signedAuthEntry = await bridgeSignAuthEntry(entryXdr);
         return { signedAuthEntry, signerAddress: opts?.address || null };

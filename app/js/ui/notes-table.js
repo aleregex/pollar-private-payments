@@ -21,9 +21,9 @@ export const NotesTable = {
                 this.filter = btn.dataset.noteFilter;
                 document.querySelectorAll('[data-note-filter]').forEach(item => {
                     const active = item === btn;
-                    item.classList.toggle('bg-cyan-400/20', active);
-                    item.classList.toggle('text-cyan-100', active);
-                    item.classList.toggle('text-slate-400', !active);
+                    item.classList.toggle('bg-brand-100', active);
+                    item.classList.toggle('text-brand-700', active);
+                    item.classList.toggle('text-slate-500', !active);
                 });
                 this.render();
             });

@@ -41,7 +41,21 @@ Si se sirviera la app desde otro origen: agregarlo en **dashboard.pollar.xyz →
 
 ---
 
-## 2. Camino elegido: identidad real + firma en MODO PUENTE
+## 2bis. ACTUALIZACIÓN (2026-07-03, tarde): modo custodial REAL con probe automático
+
+El demo del dashboard de Pollar reveló que el backend soporta la operación **`invoke_contract`** (build server-side de invocaciones Soroban con args ScVal en JSON) — y el SDK instalado confirma que `signTx` POSTea **XDR arbitrario construido por el caller** a `/tx/sign` y `signAuthEntry` a `/tx/sign-auth-entry`. Es decir, la capacidad custodial para el pool existe; la única incógnita es la política/allowlist del backend para este contrato, que **solo puede verificarse con una sesión autenticada**.
+
+Implementado en consecuencia (`app/js/wallet-pollar-custodial.js`, nuevo):
+
+- **Probe al conectar** (`probeCustodialSigning`): firma una auth entry descartable que invoca `transact` del pool. Si el backend la firma → **modo custodial**: la cuenta activa es la **wallet Pollar real** y todo se firma con KMS (`custodialSignTransaction` vía `signTx`, `custodialSignAuthEntry` vía `signAuthEntry` con conversión HashIdPreimage→SorobanAuthorizationEntry y extracción de los bytes de firma del entry firmado). Trustlines vía `setTrustline()` del SDK (sponsored). **El bridge keypair no se crea.**
+- Si el probe es rechazado → **fallback automático a bridge mode** (comportamiento anterior), con el motivo en la consola (`[Pollar] custodial signing unavailable…`).
+- La UI muestra el modo: toast "Pollar custodial signing enabled (KMS)" y "(Pollar wallet, KMS custodial signing)" en Settings.
+- Las privacy keys siguen derivándose de entropía local (sigue sin haber `signMessage`) — la entropía está keyed por la G-address de Pollar, así que la `notePublicKey` es la misma en ambos modos y la whitelist no cambia.
+- La wallet Pollar del usuario de prueba fue fondeada con 50 XLM para poder depositar en modo custodial.
+
+**Estado**: implementado, pendiente de confirmar el veredicto del probe con una sesión real de browser (requiere login Google interactivo). El resultado queda visible en la consola del browser y en el toast.
+
+## 2. Camino elegido (fallback documentado): identidad real + firma en MODO PUENTE
 
 | Pieza | Estado | Detalle |
 |---|---|---|

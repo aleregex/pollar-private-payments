@@ -4,11 +4,11 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="description" content="ASP Admin console for membership and non-membership trees." />
-  <meta name="author" content="PoolStellar" />
+  <meta name="author" content="Pollar" />
 
-  <link rel="icon" type="image/svg+xml" href="assets/favicon.svg" />
+  <link rel="icon" type="image/png" href="assets/logo-pollar.png" />
 
-  <title>ASP Admin Console</title>
+  <title>Pollar — ASP Admin Console</title>
 
   <link rel="stylesheet" href="css/app.css" />
 
@@ -21,22 +21,16 @@
 <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 flex flex-col gap-6 min-h-screen">
   <header class="flex flex-col sm:flex-row items-center justify-between gap-4 p-4 bg-dark-900/80 backdrop-blur-sm border border-dark-800 rounded-xl overflow-visible relative z-50" role="banner">
     <div class="flex items-center gap-3">
-      <div class="w-10 h-10 flex items-center justify-center bg-gradient-to-br from-brand-500 to-brand-600 rounded-lg shadow-lg shadow-brand-500/25" aria-hidden="true">
-        <svg class="w-6 h-6 text-dark-950" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <circle cx="12" cy="12" r="10"/>
-          <path d="M12 6v12M8 10l4-4 4 4"/>
-          <circle cx="12" cy="15" r="2" fill="currentColor"/>
-        </svg>
-      </div>
+      <img src="assets/logo-pollar.png" alt="Pollar logo" class="w-10 h-10 shrink-0">
       <div>
         <h1 class="text-lg sm:text-xl font-semibold">
-          PoolStellar <span class="text-dark-400 font-normal">ASP Admin</span>
+          Pollar <span class="text-dark-400 font-normal">ASP Admin</span>
         </h1>
         <p class="text-xs text-dark-500">Manage membership and non-membership trees</p>
       </div>
     </div>
     <div class="flex items-center gap-3 overflow-visible">
-      <div class="flex items-center gap-2 px-3 py-1.5 bg-dark-800 border border-dark-700 rounded-full text-sm text-dark-300">
+      <div class="flex items-center gap-2 px-3 py-1.5 bg-dark-800 border border-dark-700 rounded-lg text-sm text-dark-300">
         <span class="w-2 h-2 bg-emerald-500 rounded-full animate-pulse-dot shadow-sm shadow-emerald-500" aria-hidden="true"></span>
         <span id="networkChip">Network</span>
       </div>
@@ -61,7 +55,7 @@
 
   <section class="bg-dark-900/80 backdrop-blur-sm border border-dark-800 rounded-xl p-4 sm:p-6" aria-labelledby="handoff-heading">
     <div class="space-y-2">
-      <h2 id="handoff-heading" class="text-sm uppercase tracking-[0.25em] text-brand-400">User Handoff</h2>
+      <h2 id="handoff-heading" class="text-sm uppercase tracking-[0.25em] text-brand-600">User Handoff</h2>
       <p class="text-xs text-dark-400">
         The user must derive their ASP secret during onboarding, copy it, and send it here together with their note public key.
       </p>
@@ -71,7 +65,7 @@
   <main id="main-content" class="grid grid-cols-1 xl:grid-cols-3 gap-4 sm:gap-6">
     <section class="bg-dark-900/80 backdrop-blur-sm border border-dark-800 rounded-xl p-4 sm:p-6 space-y-4" aria-labelledby="state-heading">
       <div class="flex items-center justify-between gap-2">
-        <h2 id="state-heading" class="text-sm uppercase tracking-[0.25em] text-brand-400">Contracts and State</h2>
+        <h2 id="state-heading" class="text-sm uppercase tracking-[0.25em] text-brand-600">Contracts and State</h2>
         <div id="status" class="px-3 py-1.5 text-xs font-mono rounded-lg border border-dark-700 bg-dark-800 text-dark-300">Idle</div>
       </div>
       <div class="space-y-3">
@@ -82,7 +76,7 @@
         <label class="block text-xs font-medium text-dark-400 uppercase tracking-wide" for="nonMembershipContract">ASP Non-Membership Contract ID</label>
         <input class="w-full px-3 py-2 bg-dark-800 border border-dark-700 rounded-lg text-xs font-mono focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500" id="nonMembershipContract" type="text" placeholder="C..." />
       </div>
-      <button class="w-full px-4 py-2 bg-dark-800 border border-dark-700 rounded-lg text-sm font-semibold hover:border-brand-500 hover:text-brand-400 transition" id="refreshBtn" type="button">
+      <button class="w-full px-4 py-2 bg-dark-800 border border-dark-700 rounded-lg text-sm font-semibold hover:border-brand-500 hover:text-brand-700 transition" id="refreshBtn" type="button">
         Refresh State
       </button>
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -115,7 +109,7 @@
             <button
               type="button"
               id="toggleAdminInsertOnlyBtn"
-              class="px-3 py-1.5 bg-dark-700 border border-dark-600 rounded-lg text-xs font-semibold hover:border-brand-500 hover:text-brand-400 transition disabled:opacity-50 disabled:cursor-not-allowed"
+              class="px-3 py-1.5 bg-dark-700 border border-dark-600 rounded-lg text-xs font-semibold hover:border-brand-500 hover:text-brand-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
               disabled
             >
               Toggle
@@ -123,9 +117,9 @@
           </div>
         </div>
         <!-- Warning shown when admin-only insert is disabled -->
-        <div id="openInsertWarning" class="hidden mt-3 flex items-start gap-2 rounded-lg bg-amber-950/40 border border-amber-700/50 px-3 py-2">
-          <span class="text-amber-400 text-xs mt-0.5">&#9888;</span>
-          <p class="text-xs text-amber-300 leading-relaxed">
+        <div id="openInsertWarning" class="hidden mt-3 flex items-start gap-2 rounded-lg bg-amber-50 border border-amber-300 px-3 py-2">
+          <span class="text-amber-600 text-xs mt-0.5">&#9888;</span>
+          <p class="text-xs text-amber-700 leading-relaxed">
             <span class="font-semibold uppercase tracking-wide">Warning:</span>
             Admin-only insert is disabled. Anyone can now add membership leaves to the ASP. This bypasses the intended access-control safeguard and may allow untrusted parties to insert themselves into the approved set.
           </p>
@@ -135,7 +129,7 @@
 
     <section class="bg-dark-900/80 backdrop-blur-sm border border-dark-800 rounded-xl p-4 sm:p-6 space-y-4" aria-labelledby="membership-heading">
       <div class="flex items-center justify-between gap-2">
-        <h2 id="membership-heading" class="text-sm uppercase tracking-[0.25em] text-brand-400">Membership Leaf Builder</h2>
+        <h2 id="membership-heading" class="text-sm uppercase tracking-[0.25em] text-brand-600">Membership Leaf Builder</h2>
       </div>
       <div class="space-y-3">
         <label class="block text-xs font-medium text-dark-400 uppercase tracking-wide" for="publicKey">User Note Public Key</label>
@@ -146,10 +140,10 @@
         <input class="w-full px-3 py-2 bg-dark-800 border border-dark-700 rounded-lg text-xs font-mono focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500" id="blinding" type="text" placeholder="0" />
       </div>
       <div class="flex flex-wrap gap-3">
-        <button class="flex-1 px-4 py-2 bg-dark-800 border border-dark-700 rounded-lg text-sm font-semibold hover:border-brand-500 hover:text-brand-400 transition" id="computeMembershipLeafBtn" type="button">
+        <button class="flex-1 px-4 py-2 bg-dark-800 border border-dark-700 rounded-lg text-sm font-semibold hover:border-brand-500 hover:text-brand-700 transition" id="computeMembershipLeafBtn" type="button">
           Compute Leaf
         </button>
-        <button class="flex-1 px-4 py-2 bg-dark-800 border border-dark-700 rounded-lg text-sm font-semibold hover:border-brand-500 hover:text-brand-400 transition disabled:opacity-60" id="useMembershipLeafBtn" type="button" disabled>
+        <button class="flex-1 px-4 py-2 bg-dark-800 border border-dark-700 rounded-lg text-sm font-semibold hover:border-brand-500 hover:text-brand-700 transition disabled:opacity-60" id="useMembershipLeafBtn" type="button" disabled>
           Use Computed Leaf
         </button>
       </div>
@@ -169,7 +163,7 @@
         <label class="block text-xs font-medium text-dark-400 uppercase tracking-wide" for="membershipLeafInput">Leaf to Insert</label>
         <input class="w-full px-3 py-2 bg-dark-800 border border-dark-700 rounded-lg text-xs font-mono focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500" id="membershipLeafInput" type="text" placeholder="Paste leaf hex or decimal" />
       </div>
-      <button class="w-full px-4 py-2 bg-brand-500 text-dark-950 rounded-lg text-sm font-semibold shadow-lg shadow-brand-500/20 hover:bg-brand-400 transition" id="insertMembershipLeafBtn" type="button">
+      <button class="w-full px-4 py-2 bg-brand-700 text-white rounded-lg text-sm font-semibold shadow-lg shadow-brand-700/20 hover:bg-brand-800 transition" id="insertMembershipLeafBtn" type="button">
         Insert Membership Leaf
       </button>
       <p class="text-xs text-dark-400">Leaf = Poseidon2(note public key, ASP secret, domain=1).</p>
@@ -177,7 +171,7 @@
 
     <section class="bg-dark-900/80 backdrop-blur-sm border border-dark-800 rounded-xl p-4 sm:p-6 space-y-4" aria-labelledby="nonmembership-heading">
       <div class="flex items-center justify-between gap-2">
-        <h2 id="nonmembership-heading" class="text-sm uppercase tracking-[0.25em] text-brand-400">Non-Membership Insert</h2>
+        <h2 id="nonmembership-heading" class="text-sm uppercase tracking-[0.25em] text-brand-600">Non-Membership Insert</h2>
       </div>
       <div class="space-y-3">
         <label class="block text-xs font-medium text-dark-400 uppercase tracking-wide" for="blockedKey">Key (public key to block)</label>
@@ -191,20 +185,20 @@
           Value equals key
         </label>
       </div>
-      <button class="w-full px-4 py-2 bg-dark-800 border border-dark-700 rounded-lg text-sm font-semibold hover:border-brand-500 hover:text-brand-400 transition" id="computeNonMembershipLeafBtn" type="button">
+      <button class="w-full px-4 py-2 bg-dark-800 border border-dark-700 rounded-lg text-sm font-semibold hover:border-brand-500 hover:text-brand-700 transition" id="computeNonMembershipLeafBtn" type="button">
         Compute Leaf Hash
       </button>
       <div class="space-y-3">
         <div class="text-xs font-medium text-dark-400 uppercase tracking-wide">Computed Leaf Hash (hex)</div>
         <div class="px-3 py-2 bg-dark-800 border border-dark-700 rounded-lg font-mono text-xs text-dark-200 break-all" id="computedNonMembershipLeafHex">--</div>
       </div>
-      <button class="w-full px-4 py-2 bg-brand-500 text-dark-950 rounded-lg text-sm font-semibold shadow-lg shadow-brand-500/20 hover:bg-brand-400 transition" id="insertNonMembershipLeafBtn" type="button">
+      <button class="w-full px-4 py-2 bg-brand-700 text-white rounded-lg text-sm font-semibold shadow-lg shadow-brand-700/20 hover:bg-brand-800 transition" id="insertNonMembershipLeafBtn" type="button">
         Insert Non-Membership Leaf
       </button>
       <p class="text-xs text-dark-400">Leaf hash uses Poseidon2(key, value, domain=1).</p>
 
       <div class="border-t border-dark-700 pt-4 space-y-4">
-        <h3 class="text-sm uppercase tracking-[0.25em] text-rose-400">Remove Non-Membership Leaf</h3>
+        <h3 class="text-sm uppercase tracking-[0.25em] text-rose-600">Remove Non-Membership Leaf</h3>
         <p class="text-xs text-dark-400">Unblock a user by removing their key from the non-membership tree. Requires admin authorization.</p>
         <div class="space-y-3">
           <label class="block text-xs font-medium text-dark-400 uppercase tracking-wide" for="removeNonMembershipKey">Key (public key to unblock)</label>
@@ -218,7 +212,7 @@
 
     <section class="xl:col-span-3 bg-dark-900/80 backdrop-blur-sm border border-dark-800 rounded-xl p-4 sm:p-6" aria-labelledby="activity-heading">
       <div class="flex items-center justify-between gap-2 mb-3">
-        <h2 id="activity-heading" class="text-sm uppercase tracking-[0.25em] text-brand-400">Activity</h2>
+        <h2 id="activity-heading" class="text-sm uppercase tracking-[0.25em] text-brand-600">Activity</h2>
       </div>
       <pre class="font-mono text-xs text-dark-400 whitespace-pre-wrap" id="log"></pre>
     </section>
@@ -228,16 +222,16 @@
     <div class="py-6 text-xs text-dark-400 space-y-2">
       <p class="leading-relaxed">
         Terms &amp; Conditions:
-        <a class="text-brand-400 hover:text-brand-300 underline underline-offset-2" href="DISCLAIMER.txt" target="_blank" rel="noreferrer noopener">Read the full disclaimer</a>.
+        <a class="text-brand-600 hover:text-brand-700 underline underline-offset-2" href="DISCLAIMER.txt" target="_blank" rel="noreferrer noopener">Read the full disclaimer</a>.
       </p>
       <p class="leading-relaxed">
         Distribution notice:
-        <a class="text-brand-400 hover:text-brand-300 underline underline-offset-2" href="NOTICE.txt" target="_blank" rel="noreferrer noopener">NOTICE</a> ·
-        <a class="text-brand-400 hover:text-brand-300 underline underline-offset-2" href="circuits/NOTICE.txt" target="_blank" rel="noreferrer noopener">Circuits NOTICE</a> ·
-        <a class="text-brand-400 hover:text-brand-300 underline underline-offset-2" href="licenses/LGPL-3.0.txt" target="_blank" rel="noreferrer noopener">LGPL-3.0</a> ·
-        <a class="text-brand-400 hover:text-brand-300 underline underline-offset-2" href="licenses/GPL-3.0.txt" target="_blank" rel="noreferrer noopener">GPL-3.0</a> ·
-        <a class="text-brand-400 hover:text-brand-300 underline underline-offset-2" href="LICENSE.txt" target="_blank" rel="noreferrer noopener">Apache-2.0</a> ·
-        <a class="text-brand-400 hover:text-brand-300 underline underline-offset-2" href="circuits/source-bundle.tar.gz" download="circuits-source-bundle.tar.gz">Circuits source bundle</a>
+        <a class="text-brand-600 hover:text-brand-700 underline underline-offset-2" href="NOTICE.txt" target="_blank" rel="noreferrer noopener">NOTICE</a> ·
+        <a class="text-brand-600 hover:text-brand-700 underline underline-offset-2" href="circuits/NOTICE.txt" target="_blank" rel="noreferrer noopener">Circuits NOTICE</a> ·
+        <a class="text-brand-600 hover:text-brand-700 underline underline-offset-2" href="licenses/LGPL-3.0.txt" target="_blank" rel="noreferrer noopener">LGPL-3.0</a> ·
+        <a class="text-brand-600 hover:text-brand-700 underline underline-offset-2" href="licenses/GPL-3.0.txt" target="_blank" rel="noreferrer noopener">GPL-3.0</a> ·
+        <a class="text-brand-600 hover:text-brand-700 underline underline-offset-2" href="LICENSE.txt" target="_blank" rel="noreferrer noopener">Apache-2.0</a> ·
+        <a class="text-brand-600 hover:text-brand-700 underline underline-offset-2" href="circuits/source-bundle.tar.gz" download="circuits-source-bundle.tar.gz">Circuits source bundle</a>
       </p>
     </div>
   </footer>

@@ -4,11 +4,11 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="description" content="Generate and verify selective disclosure receipts." />
-  <meta name="author" content="PoolStellar" />
+  <meta name="author" content="Pollar" />
 
-  <link rel="icon" type="image/svg+xml" href="assets/favicon.svg" />
+  <link rel="icon" type="image/png" href="assets/logo-pollar.png" />
 
-  <title>Disclosure Receipts</title>
+  <title>Pollar — Disclosure Receipts</title>
 
   <link rel="stylesheet" href="css/app.css" />
 
@@ -19,18 +19,19 @@
 
 <body class="bg-dark-950 text-dark-50 font-sans min-h-screen antialiased">
 <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 flex flex-col gap-6 min-h-screen">
-  <header class="rounded-[28px] border border-white/8 bg-white/[0.03] px-5 py-4 shadow-[0_20px_80px_rgba(0,0,0,0.35)] backdrop-blur-xl" role="banner">
+  <header class="rounded-xl border border-slate-200 bg-white px-5 py-4 shadow-sm backdrop-blur-xl" role="banner">
     <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-      <div class="flex items-baseline gap-3">
-        <a href="index.html" title="Back to app" class="text-2xl font-semibold tracking-tight text-white">Stellar Private Payments</a>
-        <span class="text-sm text-slate-400">Selective Disclosure</span>
+      <div class="flex items-center gap-3">
+        <img src="assets/logo-pollar.png" alt="Pollar logo" class="h-10 w-10 shrink-0">
+        <a href="index.html" title="Back to app" class="text-2xl font-bold tracking-tight text-slate-900">Pollar <span class="text-brand-700">Private Payments</span></a>
+        <span class="text-sm text-slate-500">Selective Disclosure</span>
       </div>
       <div class="flex items-center gap-2">
-        <div class="flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.03] px-3 py-2 text-sm font-medium text-slate-100" title="Network">
-          <span class="h-2 w-2 rounded-full bg-cyan-300 shadow-[0_0_18px_rgba(34,211,238,0.8)]"></span>
+        <div class="flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-900" title="Network">
+          <span class="h-2 w-2 rounded-full bg-brand-600"></span>
           <span id="networkChip">Network</span>
         </div>
-        <button id="connectBtn" type="button" class="rounded-full bg-[linear-gradient(135deg,#74c5ff,#2f6dff)] px-4 py-2 text-sm font-semibold text-ink-950 shadow-[0_10px_30px_rgba(63,138,255,0.45)] transition hover:brightness-110" aria-label="Connect wallet">
+        <button id="connectBtn" type="button" class="rounded-lg bg-brand-700 px-4 py-2 text-sm font-semibold text-white shadow-md shadow-brand-700/20 transition hover:brightness-110" aria-label="Connect wallet">
           <span id="walletChip">Connect Freighter</span>
         </button>
       </div>
@@ -39,13 +40,13 @@
 
   <!-- Generate Section -->
   <section id="disclosure-generate" class="bg-dark-900/80 backdrop-blur-sm border border-dark-800 rounded-xl p-4 sm:p-6" aria-labelledby="generate-heading">
-    <h2 id="generate-heading" class="text-sm uppercase tracking-[0.25em] text-brand-400 mb-4">Generate Disclosure Receipt</h2>
+    <h2 id="generate-heading" class="text-sm uppercase tracking-[0.25em] text-brand-600 mb-4">Generate Disclosure Receipt</h2>
     <!-- Rendered by disclosure.js -->
   </section>
 
   <!-- Verify Section -->
   <section id="disclosure-verify" class="bg-dark-900/80 backdrop-blur-sm border border-dark-800 rounded-xl p-4 sm:p-6" aria-labelledby="verify-heading">
-    <h2 id="verify-heading" class="text-sm uppercase tracking-[0.25em] text-brand-400 mb-4">Verify Disclosure Receipt</h2>
+    <h2 id="verify-heading" class="text-sm uppercase tracking-[0.25em] text-brand-600 mb-4">Verify Disclosure Receipt</h2>
     <!-- Rendered by disclosure.js -->
   </section>
 
@@ -53,16 +54,16 @@
     <div class="py-6 text-xs text-dark-400 space-y-2">
       <p class="leading-relaxed">
         Terms &amp; Conditions:
-        <a class="text-brand-400 hover:text-brand-300 underline underline-offset-2" href="DISCLAIMER.txt" target="_blank" rel="noreferrer noopener">Read the full disclaimer</a>.
+        <a class="text-brand-600 hover:text-brand-700 underline underline-offset-2" href="DISCLAIMER.txt" target="_blank" rel="noreferrer noopener">Read the full disclaimer</a>.
       </p>
       <p class="leading-relaxed">
         Distribution notice:
-        <a class="text-brand-400 hover:text-brand-300 underline underline-offset-2" href="NOTICE.txt" target="_blank" rel="noreferrer noopener">NOTICE</a> &middot;
-        <a class="text-brand-400 hover:text-brand-300 underline underline-offset-2" href="circuits/NOTICE.txt" target="_blank" rel="noreferrer noopener">Circuits NOTICE</a> &middot;
-        <a class="text-brand-400 hover:text-brand-300 underline underline-offset-2" href="licenses/LGPL-3.0.txt" target="_blank" rel="noreferrer noopener">LGPL-3.0</a> &middot;
-        <a class="text-brand-400 hover:text-brand-300 underline underline-offset-2" href="licenses/GPL-3.0.txt" target="_blank" rel="noreferrer noopener">GPL-3.0</a> &middot;
-        <a class="text-brand-400 hover:text-brand-300 underline underline-offset-2" href="LICENSE.txt" target="_blank" rel="noreferrer noopener">Apache-2.0</a> &middot;
-        <a class="text-brand-400 hover:text-brand-300 underline underline-offset-2" href="circuits/source-bundle.tar.gz" download="circuits-source-bundle.tar.gz">Circuits source bundle</a>
+        <a class="text-brand-600 hover:text-brand-700 underline underline-offset-2" href="NOTICE.txt" target="_blank" rel="noreferrer noopener">NOTICE</a> &middot;
+        <a class="text-brand-600 hover:text-brand-700 underline underline-offset-2" href="circuits/NOTICE.txt" target="_blank" rel="noreferrer noopener">Circuits NOTICE</a> &middot;
+        <a class="text-brand-600 hover:text-brand-700 underline underline-offset-2" href="licenses/LGPL-3.0.txt" target="_blank" rel="noreferrer noopener">LGPL-3.0</a> &middot;
+        <a class="text-brand-600 hover:text-brand-700 underline underline-offset-2" href="licenses/GPL-3.0.txt" target="_blank" rel="noreferrer noopener">GPL-3.0</a> &middot;
+        <a class="text-brand-600 hover:text-brand-700 underline underline-offset-2" href="LICENSE.txt" target="_blank" rel="noreferrer noopener">Apache-2.0</a> &middot;
+        <a class="text-brand-600 hover:text-brand-700 underline underline-offset-2" href="circuits/source-bundle.tar.gz" download="circuits-source-bundle.tar.gz">Circuits source bundle</a>
       </p>
     </div>
   </footer>

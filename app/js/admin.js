@@ -68,8 +68,8 @@ const statusBaseClass = statusEl ? statusEl.className : '';
 
 const STATUS_STYLES = {
   info: '',
-  ok: 'bg-emerald-500/10 border-emerald-500/40 text-emerald-300',
-  error: 'bg-rose-500/10 border-rose-500/40 text-rose-300',
+  ok: 'bg-emerald-500/10 border-emerald-500/40 text-emerald-700',
+  error: 'bg-rose-500/10 border-rose-500/40 text-rose-600',
 };
 
 // Update status banner text + color
@@ -236,7 +236,7 @@ async function connect() {
     walletChip.textContent = shortAddress(address);
     networkChip.textContent = net.network || 'Testnet';
     connectBtn.classList.remove('bg-dark-800', 'hover:bg-dark-700');
-    connectBtn.classList.add('bg-brand-500/10', 'border-brand-500/30', 'text-brand-400');
+    connectBtn.classList.add('bg-brand-500/10', 'border-brand-500/30', 'text-brand-600');
 
     // Invalidate contract clients (new account may have different auth)
     state.membershipClient = null;
@@ -375,8 +375,8 @@ function updateAdminInsertOnlyDisplay(value) {
   state.adminInsertOnly = value;
   adminInsertOnlyStatusEl.textContent = value ? 'Enabled' : 'Disabled';
   adminInsertOnlyStatusEl.className = value
-    ? 'text-xs font-mono text-emerald-400'
-    : 'text-xs font-mono text-amber-400';
+    ? 'text-xs font-mono text-emerald-600'
+    : 'text-xs font-mono text-amber-600';
   toggleAdminInsertOnlyBtn.textContent = value ? 'Disable' : 'Enable';
   toggleAdminInsertOnlyBtn.disabled = !state.address;
   // Show warning when anyone can insert (admin-only is disabled)

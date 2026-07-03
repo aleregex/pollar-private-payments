@@ -50,6 +50,18 @@ const LS_WHITELIST_ID = (notePublicKey) => `pollarWhitelist:id:${notePublicKey}`
 
 let client = null;
 let bridgeKeypair = null; // BRIDGE MODE signing key (per Pollar G-address)
+// True when connect-time probing confirmed Pollar's backend custodially signs
+// pool transactions (auth entries + envelope) with the user's KMS key. When
+// set, the bridge keypair is not used: the Pollar wallet IS the signer.
+let custodialMode = false;
+
+export function setCustodialMode(enabled) {
+    custodialMode = !!enabled;
+}
+
+export function isCustodialMode() {
+    return custodialMode;
+}
 // True only when the user completed a REAL login flow in this page load (as
 // opposed to a session restored from storage). Lets the connect flow require
 // an explicit login for stored sessions without ever logging out a login the
@@ -62,6 +74,13 @@ export function getPollarClient() {
             apiKey: POLLAR_API_KEY,
             stellarNetwork: 'testnet',
         });
+        // Social login ONLY. The SDK unconditionally registers its built-in
+        // Freighter/Albedo adapters and the login modal renders them, but an
+        // external-wallet session is useless here (no custodial signing, and
+        // native Freighter already has its own first-class path in this app).
+        // There is no config switch for this, so blank the list the modal
+        // reads.
+        client.listWalletAdapters = () => [];
     }
     return client;
 }
@@ -76,6 +95,10 @@ export function getPollarSession() {
         pollarAddress: session?.wallet?.address || null,
         email: profile?.mail || profile?.providers?.email?.address || null,
         userId: session?.userId || null,
+        // 'internal' = platform-custodied (social login). 'external' would be
+        // a Freighter/Albedo session created through Pollar — not supported
+        // by this app's Pollar path.
+        custody: session?.wallet?.type || null,
     };
 }
 
@@ -246,6 +269,49 @@ export async function ensureBridgeTrustlines(pools) {
     tx.sign(bridgeKeypair);
     await horizon.submitTransaction(tx);
     console.log('[Pollar bridge] trustlines created:', missing.map(a => `${a.getCode()}:${a.getIssuer().slice(0, 6)}…`).join(', '));
+}
+
+/**
+ * BRIDGE MODE: make sure the bridge signer holds enough of `asset` to cover
+ * a deposit of `amountStroops`, topping it up from the user's Pollar wallet
+ * with a REAL custodial payment (`runTx('payment')`, KMS-signed, fees
+ * sponsored — Pollar's core operation, fully supported by the backend).
+ * The user's funds live in their Pollar wallet; the bridge only holds them
+ * for the seconds between the top-up and the pool deposit.
+ */
+export async function ensureBridgeFunds(asset, amountStroops) {
+    if (!bridgeKeypair) throw new Error('Bridge keypair not initialized');
+    const bridgeAddress = bridgeKeypair.publicKey();
+
+    const horizon = new Horizon.Server(HORIZON_URL);
+    const account = await horizon.loadAccount(bridgeAddress);
+    const balanceEntry = account.balances.find(b =>
+        asset.kind === 'native'
+            ? b.asset_type === 'native'
+            : b.asset_code === asset.code && b.asset_issuer === asset.issuer
+    );
+    const have = BigInt(Math.round(parseFloat(balanceEntry?.balance || '0') * 1e7));
+    // Native needs headroom for reserves/fees; friendbot already covered it.
+    if (asset.kind === 'native' || have >= amountStroops) return;
+
+    const missing = amountStroops - have;
+    const amountStr = (Number(missing) / 1e7).toFixed(7);
+    console.log(`[Pollar bridge] topping up ${amountStr} ${asset.code} from the Pollar wallet (custodial payment)…`);
+    const outcome = await getPollarClient().runTx('payment', {
+        destination: bridgeAddress,
+        amount: amountStr,
+        asset: {
+            type: asset.code.length <= 4 ? 'credit_alphanum4' : 'credit_alphanum12',
+            code: asset.code,
+            issuer: asset.issuer,
+        },
+    });
+    if (outcome?.status !== 'success' && outcome?.status !== 'pending') {
+        throw new Error(
+            `Could not move ${asset.code} from your Pollar wallet: ${outcome?.message || outcome?.details || 'payment failed'}`
+        );
+    }
+    console.log('[Pollar bridge] top-up tx:', outcome?.hash);
 }
 
 // ---------------------------------------------------------------------------

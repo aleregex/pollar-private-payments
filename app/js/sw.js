@@ -23,8 +23,8 @@ async function checkAndNotify() {
     const openClients = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
     if (openClients.some((c) => c.visibilityState === 'visible')) return;
 
-    await self.registration.showNotification('PoolStellar Reminder', {
-        body: "It's been over 5 days since you last opened PoolStellar. Open the app to stay within the RPC retention window.",
+    await self.registration.showNotification('Pollar Reminder', {
+        body: "It's been over 5 days since you last opened Pollar. Open the app to stay within the RPC retention window.",
         icon: '/assets/logo.svg',
         tag: 'reopen-reminder',
         renotify: false,
